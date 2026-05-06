@@ -52,4 +52,4 @@ Defaults baked into the bootstraps: Flask + gunicorn, `requirements.txt` (no `py
 
 ## License
 
-MIT — see [`LICENSE.md`](LICENSE.md).
+MIT — see [`LICENSE`](LICENSE).
