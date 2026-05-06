@@ -33,21 +33,29 @@ your-project/
 ├── README.md
 ├── .gitignore
 ├── .env.example                 # template for env vars; never commit .env itself
-├── docker-compose.yml           # orchestrates services; add when 2+ services exist
+├── docker-compose.yml           # orchestrates services (incl. database); add when needed
 │
 ├── backend/
 │   ├── .venv/                   # one venv for the backend (gitignored)
 │   ├── Dockerfile
-│   ├── requirements.txt         # runtime deps (fastapi, anthropic, pydantic, ...)
+│   ├── requirements.txt         # runtime deps (fastapi, anthropic, sqlalchemy, ...)
 │   ├── requirements-dev.txt     # dev deps (pytest, ruff, mypy, ...)
+│   ├── alembic.ini              # alembic config (only if using a database)
+│   ├── migrations/              # database migrations (only if using a database)
+│   │   ├── env.py
+│   │   └── versions/
+│   │       └── 001_initial.py
 │   ├── your_pkg/                # the importable package (flat layout, no src/)
 │   │   ├── __init__.py
 │   │   ├── api/                 # FastAPI routes / HTTP layer
 │   │   ├── core/                # config, logging, settings (pydantic-settings)
+│   │   ├── db/                  # database engine, session, base class
+│   │   ├── models/              # SQLAlchemy ORM models (database tables)
+│   │   ├── repositories/        # optional: data access layer (queries)
 │   │   ├── services/            # business logic — orchestrates models + APIs
 │   │   ├── ml_models/           # ML model wrappers (loading, inference)
 │   │   ├── clients/             # external API clients (Anthropic, etc.)
-│   │   ├── schemas/             # Pydantic request/response models
+│   │   ├── schemas/             # Pydantic request/response models (API I/O)
 │   │   └── utils/
 │   └── tests/
 │
@@ -64,16 +72,16 @@ your-project/
 ├── frontend/                    # populate when stack is chosen
 │   └── README.md                # placeholder noting "TBD"
 │
-├── data/                        # gitignored except README + .gitkeep files
+├── data/                        # ML data, gitignored except README + .gitkeep files
 │   ├── raw/                     # immutable original data — never edit
 │   ├── interim/                 # intermediate processing artifacts
 │   ├── processed/               # final data fed into training
 │   └── external/                # third-party data
 │
-├── models/                      # trained model artifacts (gitignored)
+├── models/                      # trained ML model artifacts (gitignored)
 │   └── README.md
 │
-├── scripts/                     # one-off CLI scripts (download data, migrate, etc.)
+├── scripts/                     # one-off CLI scripts (download data, seed db, etc.)
 │
 └── docs/
     ├── project-structure.md     # this file
@@ -134,6 +142,8 @@ Why this matters in practice:
 
 Putting them in one folder muddles all of this. Two folders cost you nothing and keep the distinction clear.
 
+> **Note:** the top-level `data/` and `models/` folders are for *ML* data and *ML* model artifacts — the static files used by training and the trained weights it produces. They are *not* the same thing as the application's runtime database. See the Database section below for that.
+
 ### Why `notebooks/` lives inside `ml/`, not at the repo root
 
 A `notebooks/` folder at the root signals "notebooks are first-class citizens of this project." That's a trap.
@@ -167,34 +177,130 @@ Two files = two clean environments. The serving image is lean; the training envi
 
 (`frontend/` will get its own dependency manifest when you add it — `package.json` for npm/pnpm. Same principle: frontend deps don't belong in Python files.)
 
-### Why split `your_pkg/` into `api/`, `core/`, `services/`, `clients/`, etc.
+### Why split `your_pkg/` into `api/`, `core/`, `db/`, `models/`, `services/`, etc.
 
 Separation of concerns inside the package:
 
 - **`api/`** — HTTP layer only. Defines routes, parses requests, formats responses. Contains no business logic.
 - **`core/`** — app-wide infrastructure: config loading, logging setup, settings.
-- **`services/`** — business logic. Orchestrates models and external clients to fulfill requests.
-- **`ml_models/`** — ML model wrappers (loading weights, running inference). Named `ml_models/` rather than `models/` to avoid confusion with database models if you ever add an ORM, and to avoid colliding with the popular `models` PyPI package.
+- **`db/`** — database connection plumbing: SQLAlchemy engine, session factory, declarative base. The "how do I talk to the database" code, not the "what's in the database" code.
+- **`models/`** — SQLAlchemy ORM models. One class per database table. This is what `models/` means in nearly every Python web framework (Django, FastAPI tutorials, Flask), so the name aligns with ecosystem conventions.
+- **`repositories/`** *(optional)* — a data access layer that wraps queries. `user_repo.get_by_email(email)` instead of writing raw SQLAlchemy queries inside services. Add this when query logic starts duplicating across services; skip it for small apps.
+- **`services/`** — business logic. Orchestrates ORM models, ML models, and external clients to fulfill requests.
+- **`ml_models/`** — ML model wrappers (loading weights, running inference). Named `ml_models/` rather than `models/` to keep ML out of the way of database models, and to avoid colliding with the popular `models` PyPI package.
 - **`clients/`** — external API integrations (Anthropic, OpenAI, etc.).
-- **`schemas/`** — Pydantic models for request/response validation.
+- **`schemas/`** — Pydantic models for **API request/response validation**. Despite the similar-looking name, these are different from `models/` — see below.
 - **`utils/`** — small generic helpers.
 
-The dependency direction goes one way: **`api/` → `services/` → `ml_models/` + `clients/`**. An HTTP route never calls the Anthropic API directly; it calls a `service`, which calls a `client`. This means you can swap out the HTTP framework, change API providers, or upgrade a model without touching unrelated layers.
+The dependency direction goes one way: **`api/` → `services/` → (`models/` + `ml_models/` + `clients/` + `repositories/`)**. An HTTP route never queries the database directly; it calls a `service`, which uses a repository or ORM model. This means you can swap out the HTTP framework, change DB engines, change API providers, or upgrade an ML model without touching unrelated layers.
 
 This is straight from FastAPI's [full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template) and [Netflix Dispatch](https://github.com/Netflix/dispatch).
+
+### Why `schemas/` (Pydantic) and `models/` (SQLAlchemy) are separate
+
+They sound similar and often have classes with the same names (`User`, `Conversation`), but they describe two different worlds:
+
+- **`models/`** describes **what's stored in the database**. SQLAlchemy classes mapped to tables.
+- **`schemas/`** describes **what crosses the API boundary**. Pydantic classes that validate incoming requests and shape outgoing responses.
+
+These will diverge as the app grows. A `User` ORM model has `password_hash`, `created_at`, internal flags, etc. A `UserResponse` Pydantic schema only includes the safe fields you want to send back to clients. A `UserCreate` schema accepts a plaintext password the model never stores. Conflating them either leaks DB internals to your API or pollutes your DB with API-only concerns.
+
+Keep them separate from day one. It's more files but radically cleaner code.
 
 ### Why configs are split (not a top-level `configs/`)
 
 There are two genuinely different kinds of configuration:
 
 - **Experiment configs** (learning rate, model size, dataset version) → `ml/configs/`. These describe a *training run* and should be checked in, versioned, and reproducible.
-- **App configs** (API keys, ports, log levels) → `backend/your_pkg/core/` as Pydantic settings, loaded from environment variables (via `.env` locally, real env vars in production). These describe the *running service* and should never be checked in.
+- **App configs** (API keys, ports, log levels, database URL) → `backend/your_pkg/core/` as Pydantic settings, loaded from environment variables (via `.env` locally, real env vars in production). These describe the *running service* and should never be checked in.
 
 A top-level `configs/` mixes secrets with experiment hyperparameters and creates confusion about which file controls what.
 
 ### Why `frontend/` is a sibling of `backend/`, not nested
 
 Standard full-stack layout. The frontend and backend speak to each other over HTTP — they're peers, not parent-child. Each can be developed, tested, built, and deployed independently. Matches Vercel's examples, the FastAPI full-stack template, and most Next.js + Python combos in production.
+
+---
+
+## Database
+
+If your project needs persistence (user accounts, saved conversations, application state), "the database" is actually three separate things, each living in a different place:
+
+### 1. Connection code and ORM models — inside `your_pkg/`
+
+The Python code that talks to the database is just application code. It lives inside the package:
+
+- `your_pkg/db/` — engine, session factory, declarative base. Plumbing.
+- `your_pkg/models/` — SQLAlchemy ORM classes, one per table.
+- `your_pkg/repositories/` — *optional* data access layer (skip for small apps).
+
+### 2. Migrations — at `backend/migrations/`, outside the package
+
+Migrations are versioned scripts that evolve the schema over time. They sit beside `your_pkg/`, not inside it:
+
+```
+backend/
+├── alembic.ini
+├── migrations/
+│   ├── env.py
+│   └── versions/
+│       ├── 001_initial.py
+│       └── 002_add_user_email.py
+└── your_pkg/
+```
+
+Why outside `your_pkg/`? Migrations aren't *imported* by the app — they're a separate artifact run by a CLI (`alembic upgrade head`) at deploy time. Putting them inside the package conflates "code my app runs" with "scripts deployment runs."
+
+[Alembic](https://alembic.sqlalchemy.org/) is the standard SQLAlchemy migration tool and generates this structure automatically (`alembic init migrations`).
+
+### 3. The database server — in `docker-compose.yml`
+
+The actual running Postgres (or MySQL, etc.) is infrastructure, not files in the repo. It lives in your compose file:
+
+```yaml
+services:
+  db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    build: ./backend
+    depends_on:
+      - db
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+
+volumes:
+  postgres_data:
+```
+
+The connection string lives in `.env` locally (and real environment variables in production), read by your `core/config.py` Pydantic settings.
+
+### Database contents are NOT the `data/` folder
+
+A common confusion worth heading off:
+
+- **`data/` folder** = static files used by ML training (CSVs, JSONL, raw scrapes). Versioned alongside the code that processes them.
+- **Database contents** = live application state (users, sessions, conversations). Lives inside the running Postgres container, backed up separately, never committed to Git.
+
+If you need to ship sample DB data with the repo (for tests, local dev), put it in `backend/tests/fixtures/` or in a `scripts/seed_db.py` script. Don't put it in the top-level `data/` folder — that's for ML.
+
+### Required dependencies (when adding a database)
+
+Add to `backend/requirements.txt`:
+
+```
+sqlalchemy>=2.0
+alembic>=1.13
+psycopg2-binary>=2.9       # or asyncpg for async; or pymysql for MySQL
+```
 
 ---
 
@@ -206,7 +312,7 @@ This project uses `requirements.txt` files. No `pyproject.toml`. No package inst
 
 | File | Purpose |
 |---|---|
-| `backend/requirements.txt` | Runtime deps for the serving API |
+| `backend/requirements.txt` | Runtime deps for the serving API (incl. database drivers) |
 | `backend/requirements-dev.txt` | Dev tools (pytest, ruff, mypy). Includes runtime via `-r requirements.txt` |
 | `ml/requirements.txt` | Training deps (torch, transformers, datasets, etc.) |
 
@@ -247,6 +353,7 @@ When you run a Python command, Python automatically adds the **current working d
 # Inside backend/your_pkg/api/routes.py
 from your_pkg.services.chat import answer_question
 from your_pkg.clients.anthropic import AnthropicClient
+from your_pkg.models.user import User
 ```
 
 For this to work, Python needs to find a folder named `your_pkg` somewhere it searches. With a flat layout, `your_pkg` sits directly under `backend/`, so:
@@ -275,7 +382,11 @@ source .venv/bin/activate              # macOS/Linux
 # 4. Install backend dependencies
 pip install -r requirements-dev.txt
 
-# 5. Set up the ML environment separately (different deps, different machine in production)
+# 5. (If using a database) Start the DB container and apply migrations
+docker compose up -d db
+alembic upgrade head
+
+# 6. Set up the ML environment separately (different deps, different machine in production)
 cd ../ml
 python -m venv .venv
 source .venv/bin/activate
@@ -294,6 +405,10 @@ source .venv/bin/activate
 python -m your_pkg.api.main
 # or with uvicorn:
 uvicorn your_pkg.api.main:app --reload
+
+# Database migrations (when schema changes)
+alembic revision --autogenerate -m "add user table"
+alembic upgrade head
 
 # Run tests
 pytest tests/
@@ -355,6 +470,8 @@ COPY backend/ .
 CMD ["uvicorn", "your_pkg.api.main:app", "--host", "0.0.0.0"]
 ```
 
+Your `docker-compose.yml` will orchestrate the backend container, the database container, and (eventually) the frontend.
+
 ---
 
 ## Tool Configuration
@@ -364,6 +481,7 @@ Each tool gets its own config file:
 - `backend/pytest.ini` — pytest configuration
 - `backend/ruff.toml` — ruff linter/formatter config
 - `backend/mypy.ini` — mypy type checker config
+- `backend/alembic.ini` — alembic configuration (only if using a database)
 
 ---
 
@@ -371,7 +489,7 @@ Each tool gets its own config file:
 
 - **`README.md`** (root) — what the project is, quick start. First thing on GitHub.
 - **`docs/`** — everything else: architecture, design notes, decision records.
-- **`docs/adr/`** (optional, add later) — Architecture Decision Records, one short markdown file per significant decision (e.g., `0001-use-fastapi.md`, `0002-single-service-layout.md`). Standard template: [Michael Nygard's ADR format](https://github.com/joelparkerhenderson/architecture-decision-record).
+- **`docs/adr/`** (optional, add later) — Architecture Decision Records, one short markdown file per significant decision (e.g., `0001-use-fastapi.md`, `0002-postgres-vs-sqlite.md`). Standard template: [Michael Nygard's ADR format](https://github.com/joelparkerhenderson/architecture-decision-record).
 
 ---
 
@@ -385,8 +503,10 @@ Each tool gets its own config file:
 - `backend/requirements.txt`, `backend/requirements-dev.txt`, `ml/requirements.txt`
 
 **Add when needed:**
+- `your_pkg/db/`, `your_pkg/models/`, `migrations/` — when the app needs persistence.
+- `your_pkg/repositories/` — when query logic starts duplicating across services.
 - `frontend/` — when stack is chosen.
-- `docker-compose.yml` — when there are 2+ runnable things to compose.
+- `docker-compose.yml` — when there are 2+ runnable things to compose (e.g., backend + database).
 - `models/` artifacts — when training produces them.
 - `docs/adr/` — when decisions worth recording accumulate.
 
@@ -414,6 +534,7 @@ Each of these is a *future* decision. The current structure makes all of them st
 - [Cookiecutter Data Science](https://cookiecutter-data-science.drivendata.org/)
 - [Hugging Face transformers examples](https://github.com/huggingface/transformers/tree/main/examples)
 - [Netflix Dispatch](https://github.com/Netflix/dispatch)
+- [Alembic — SQLAlchemy migrations](https://alembic.sqlalchemy.org/)
 - [Hydra (config management)](https://hydra.cc/)
 - [DVC (data + model versioning)](https://dvc.org/)
 - [Architecture Decision Records](https://github.com/joelparkerhenderson/architecture-decision-record)

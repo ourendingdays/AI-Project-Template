@@ -1,4 +1,4 @@
-# Project Structure
+# Project Structure (Multi-Service Monorepo)
 
 Reference document for the layout of this project. Covers the directory tree, the rationale behind each part, how dependencies are managed, and the day-to-day development workflow.
 
@@ -32,7 +32,7 @@ your-project/
 ├── README.md
 ├── .gitignore
 ├── .env.example                 # template for env vars; never commit .env itself
-├── docker-compose.yml           # orchestrates services; add when 2+ services exist
+├── docker-compose.yml           # orchestrates services (incl. databases); add when needed
 │
 ├── backend/
 │   ├── .venv/                   # one venv shared by all backend services (gitignored)
@@ -43,11 +43,18 @@ your-project/
 │   │   ├── __init__.py
 │   │   ├── api/                 # FastAPI routes / HTTP layer
 │   │   ├── core/                # config, logging, settings
+│   │   ├── db/                  # database engine, session, base (if service uses a DB)
+│   │   ├── models/              # SQLAlchemy ORM models (database tables)
+│   │   ├── repositories/        # optional: data access layer
 │   │   ├── services/            # business logic
 │   │   ├── ml_models/           # ML model wrappers (loading, inference)
 │   │   ├── clients/             # external API clients (Anthropic, etc.)
-│   │   ├── schemas/             # Pydantic request/response models
-│   │   └── utils/
+│   │   ├── schemas/             # Pydantic request/response models (API I/O)
+│   │   ├── utils/
+│   │   ├── alembic.ini          # if this service has its own DB
+│   │   └── migrations/          # alembic migrations for this service's DB
+│   │       ├── env.py
+│   │       └── versions/
 │   ├── service_b/               # another service follows the same shape
 │   │   └── ...
 │   └── tests/
@@ -66,17 +73,17 @@ your-project/
 ├── frontend/                    # populate when stack is chosen
 │   └── README.md                # placeholder noting "TBD"
 │
-├── data/                        # gitignored except README + .gitkeep files
+├── data/                        # ML data, gitignored except README + .gitkeep files
 │   └── service_a/
 │       ├── raw/                 # immutable original data — never edit
 │       ├── interim/             # intermediate processing artifacts
 │       ├── processed/           # final data fed into training
 │       └── external/            # third-party data
 │
-├── models/                      # trained model artifacts (gitignored)
+├── models/                      # trained ML model artifacts (gitignored)
 │   └── service_a/
 │
-├── scripts/                     # one-off CLI scripts (download data, migrate, etc.)
+├── scripts/                     # one-off CLI scripts (download data, seed db, etc.)
 │
 └── docs/
     ├── project-structure.md     # this file
@@ -137,6 +144,8 @@ Why this matters in practice:
 
 Putting them in one folder muddles all of this. Two folders cost you nothing and keep the distinction clear. Both are further split by service so each service's data and models are isolated.
 
+> **Note:** the top-level `data/` and `models/` folders are for *ML* data and *ML* model artifacts — the static files used by training and the trained weights it produces. They are *not* the same thing as a service's runtime database. See the Database section below for that.
+
 ### Why `notebooks/` lives inside `ml/<service>/`, not at the repo root
 
 A `notebooks/` folder at the root signals "notebooks are first-class citizens of this project." That's a trap.
@@ -166,38 +175,142 @@ If you put everything in one project-wide `requirements.txt`:
 - Image size goes from ~200 MB to several gigabytes.
 - Every training-tool security advisory affects your production API.
 
-**Why combined within `backend/` rather than per-service**: for a solo project, you'll naturally keep common libraries (FastAPI, Pydantic, Anthropic SDK) at the same version across services. One combined file means one venv, one `pip install`, one place to upgrade. The cost is that *if* two services ever need genuinely conflicting versions of the same library, you're stuck — but that's vanishingly rare in solo work, and the structure can be split per-service later if it ever happens.
+**Why combined within `backend/` rather than per-service**: for a solo project, you'll naturally keep common libraries (FastAPI, Pydantic, Anthropic SDK, SQLAlchemy) at the same version across services. One combined file means one venv, one `pip install`, one place to upgrade. The cost is that *if* two services ever need genuinely conflicting versions of the same library, you're stuck — but that's vanishingly rare in solo work, and the structure can be split per-service later if it ever happens.
 
 (`frontend/` will get its own dependency manifest when you add it — `package.json` for npm/pnpm. Same principle: frontend deps don't belong in Python files.)
 
-### Why split each service into `api/`, `core/`, `services/`, `clients/`, etc.
+### Why split each service into `api/`, `core/`, `db/`, `models/`, `services/`, etc.
 
 Separation of concerns inside each service:
 
 - **`api/`** — HTTP layer only. Defines routes, parses requests, formats responses. Contains no business logic.
 - **`core/`** — service-wide infrastructure: config loading, logging setup, settings.
-- **`services/`** — business logic. Orchestrates models and external clients to fulfill requests. (The naming is a bit recursive — `service_a/services/` means "business logic units within service_a." If the doubling feels confusing, rename this folder to `logic/` or `domain/`.)
-- **`ml_models/`** — ML model wrappers (loading weights, running inference). Named `ml_models/` rather than `models/` to avoid confusion with database models if you ever add an ORM, and to avoid colliding with the popular `models` PyPI package.
+- **`db/`** — database connection plumbing: SQLAlchemy engine, session factory, declarative base. The "how do I talk to the database" code, not the "what's in the database" code.
+- **`models/`** — SQLAlchemy ORM models. One class per database table. This is what `models/` means in nearly every Python web framework (Django, FastAPI tutorials, Flask), so the name aligns with ecosystem conventions.
+- **`repositories/`** *(optional)* — a data access layer that wraps queries. Add this when query logic starts duplicating; skip it for small services.
+- **`services/`** — business logic. (The naming is a bit recursive — `service_a/services/` means "business logic units within service_a." If the doubling feels confusing, rename this folder to `logic/` or `domain/`.)
+- **`ml_models/`** — ML model wrappers (loading weights, running inference). Named `ml_models/` rather than `models/` to keep ML out of the way of database models, and to avoid colliding with the popular `models` PyPI package.
 - **`clients/`** — external API integrations (Anthropic, OpenAI, etc.).
-- **`schemas/`** — Pydantic models for request/response validation.
+- **`schemas/`** — Pydantic models for **API request/response validation**. Despite the similar-looking name, these are different from `models/` — see below.
 - **`utils/`** — small generic helpers.
 
-The dependency direction goes one way: **`api/` → `services/` → `ml_models/` + `clients/`**. An HTTP route never calls the Anthropic API directly; it calls a `service`, which calls a `client`. This means you can swap out the HTTP framework, change API providers, or upgrade a model without touching unrelated layers.
+The dependency direction goes one way: **`api/` → `services/` → (`models/` + `ml_models/` + `clients/` + `repositories/`)**. An HTTP route never queries the database directly; it calls a `service`, which uses a repository or ORM model. This means you can swap out the HTTP framework, change DB engines, change API providers, or upgrade an ML model without touching unrelated layers.
 
 This is straight from FastAPI's [full-stack-fastapi-template](https://github.com/fastapi/full-stack-fastapi-template) and [Netflix Dispatch](https://github.com/Netflix/dispatch).
+
+### Why `schemas/` (Pydantic) and `models/` (SQLAlchemy) are separate
+
+They sound similar and often have classes with the same names (`User`, `Conversation`), but they describe two different worlds:
+
+- **`models/`** describes **what's stored in the database**. SQLAlchemy classes mapped to tables.
+- **`schemas/`** describes **what crosses the API boundary**. Pydantic classes that validate incoming requests and shape outgoing responses.
+
+These will diverge as the app grows. A `User` ORM model has `password_hash`, `created_at`, internal flags, etc. A `UserResponse` Pydantic schema only includes the safe fields you want to send back to clients. A `UserCreate` schema accepts a plaintext password the model never stores. Conflating them either leaks DB internals to your API or pollutes your DB with API-only concerns.
+
+Keep them separate from day one. It's more files but radically cleaner code.
 
 ### Why configs are split (not a top-level `configs/`)
 
 There are two genuinely different kinds of configuration:
 
 - **Experiment configs** (learning rate, model size, dataset version) → `ml/<service>/configs/`. These describe a *training run* and should be checked in, versioned, and reproducible.
-- **App configs** (API keys, ports, log levels) → `backend/<service>/core/` as Pydantic settings, loaded from environment variables (via `.env` locally, real env vars in production). These describe the *running service* and should never be checked in.
+- **App configs** (API keys, ports, log levels, database URLs) → `backend/<service>/core/` as Pydantic settings, loaded from environment variables (via `.env` locally, real env vars in production). These describe the *running service* and should never be checked in.
 
 A top-level `configs/` mixes secrets with experiment hyperparameters and creates confusion about which file controls what.
 
 ### Why `frontend/` is a sibling of `backend/`, not nested
 
 Standard full-stack layout. The frontend and backend speak to each other over HTTP — they're peers, not parent-child. Each can be developed, tested, built, and deployed independently. A unified frontend can talk to multiple backend services — that's the whole point of the monorepo-with-services pattern.
+
+---
+
+## Database
+
+If a service needs persistence (user accounts, saved conversations, application state), "the database" is actually three separate things, each living in a different place.
+
+### 1. Connection code and ORM models — inside the service
+
+The Python code that talks to the database is just service code. It lives inside the service folder:
+
+- `service_a/db/` — engine, session factory, declarative base. Plumbing.
+- `service_a/models/` — SQLAlchemy ORM classes, one per table.
+- `service_a/repositories/` — *optional* data access layer (skip for small services).
+
+### 2. Migrations — inside the service folder, beside the code
+
+Migrations are versioned scripts that evolve the schema over time. They sit inside the service that owns the database:
+
+```
+backend/service_a/
+├── alembic.ini
+├── migrations/
+│   ├── env.py
+│   └── versions/
+│       ├── 001_initial.py
+│       └── 002_add_user_email.py
+├── api/
+├── db/
+├── models/
+└── ...
+```
+
+Migrations live with the service rather than at the `backend/` level because in this pattern **each service owns its own database**. Centralized migrations would couple the services together, which is exactly what the multi-service split is trying to avoid.
+
+[Alembic](https://alembic.sqlalchemy.org/) is the standard SQLAlchemy migration tool and generates this structure automatically (`alembic init migrations`).
+
+### 3. The database server — in `docker-compose.yml`
+
+The actual running Postgres (or MySQL, etc.) is infrastructure, not files in the repo. It lives in your compose file:
+
+```yaml
+services:
+  service_a_db:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: ${SERVICE_A_DB_USER}
+      POSTGRES_PASSWORD: ${SERVICE_A_DB_PASSWORD}
+      POSTGRES_DB: ${SERVICE_A_DB_NAME}
+    volumes:
+      - service_a_data:/var/lib/postgresql/data
+
+  service_a:
+    build: ./backend
+    command: uvicorn service_a.api.main:app --host 0.0.0.0
+    depends_on:
+      - service_a_db
+    environment:
+      DATABASE_URL: postgresql://${SERVICE_A_DB_USER}:${SERVICE_A_DB_PASSWORD}@service_a_db:5432/${SERVICE_A_DB_NAME}
+
+volumes:
+  service_a_data:
+```
+
+Each service that needs a database gets its own DB container. Connection strings live in `.env` locally (and real environment variables in production), read by each service's `core/config.py` Pydantic settings.
+
+### Should services share a database?
+
+**Default to no.** Each service that needs persistence should own its own database. If service B needs data from service A, it asks service A over HTTP — not by querying service A's database directly. Sharing a database couples services in ways that are very hard to undo.
+
+If two services genuinely manage the same data (e.g., both read and write user records), that's a sign they should probably be one service — fold them together rather than sharing a DB.
+
+### Database contents are NOT the `data/` folder
+
+A common confusion worth heading off:
+
+- **`data/` folder** = static files used by ML training (CSVs, JSONL, raw scrapes). Versioned alongside the code that processes them.
+- **Database contents** = live application state (users, sessions, conversations). Lives inside the running Postgres container, backed up separately, never committed to Git.
+
+If you need to ship sample DB data with the repo (for tests, local dev), put it in `backend/<service>/tests/fixtures/` or in a `scripts/seed_<service>_db.py` script. Don't put it in the top-level `data/` folder — that's for ML.
+
+### Required dependencies (when adding a database)
+
+Add to `backend/requirements.txt` (shared across all services that need a DB):
+
+```
+sqlalchemy>=2.0
+alembic>=1.13
+psycopg2-binary>=2.9       # or asyncpg for async; or pymysql for MySQL
+```
 
 ---
 
@@ -209,7 +322,7 @@ This project uses `requirements.txt` files. No `pyproject.toml`. No package inst
 
 | File | Purpose |
 |---|---|
-| `backend/requirements.txt` | Runtime deps for all backend services |
+| `backend/requirements.txt` | Runtime deps for all backend services (incl. database drivers) |
 | `backend/requirements-dev.txt` | Dev tools (pytest, ruff, mypy). Includes runtime via `-r requirements.txt` |
 | `ml/requirements.txt` | Training deps (torch, transformers, datasets, etc.) for all ML pipelines |
 
@@ -260,6 +373,7 @@ When you run a Python command, Python automatically adds the **current working d
 # Inside backend/service_a/api/routes.py
 from service_a.services.chat import answer_question
 from service_a.clients.anthropic import AnthropicClient
+from service_a.models.user import User
 ```
 
 For this to work, Python needs to find a folder named `service_a` somewhere it searches. With the flat layout, services sit directly under `backend/`, so:
@@ -290,7 +404,11 @@ source .venv/bin/activate              # macOS/Linux
 # 4. Install backend dependencies
 pip install -r requirements-dev.txt
 
-# 5. Set up the ML environment separately (different deps, different machine in production)
+# 5. (If using databases) Start DB containers and apply migrations per service
+docker compose up -d service_a_db
+cd service_a && alembic upgrade head && cd ..
+
+# 6. Set up the ML environment separately (different deps, different machine in production)
 cd ../ml
 python -m venv .venv
 source .venv/bin/activate
@@ -312,6 +430,12 @@ uvicorn service_a.api.main:app --reload --port 8000
 
 # Run a second service in another terminal (same venv)
 uvicorn service_b.api.main:app --reload --port 8001
+
+# Database migrations (when a service's schema changes)
+cd service_a
+alembic revision --autogenerate -m "add user table"
+alembic upgrade head
+cd ..
 
 # Run all tests
 pytest tests/
@@ -381,6 +505,8 @@ For multiple services, you can either:
 - Build one image and run different `CMD`s per container (simplest), or
 - Build per-service images later when services diverge enough to justify it.
 
+Your `docker-compose.yml` will orchestrate the service containers, the database containers (one per service that needs persistence), and the frontend.
+
 ---
 
 ## Tool Configuration
@@ -390,6 +516,7 @@ Each tool gets its own config file:
 - `backend/pytest.ini` — pytest configuration
 - `backend/ruff.toml` — ruff linter/formatter config
 - `backend/mypy.ini` — mypy type checker config
+- `backend/<service>/alembic.ini` — alembic configuration, per service that uses a database
 
 ---
 
@@ -397,7 +524,7 @@ Each tool gets its own config file:
 
 - **`README.md`** (root) — what the project is, quick start. First thing on GitHub.
 - **`docs/`** — everything else: architecture, design notes, decision records.
-- **`docs/adr/`** (optional, add later) — Architecture Decision Records, one short markdown file per significant decision (e.g., `0001-use-fastapi.md`, `0002-monorepo-with-services.md`). Standard template: [Michael Nygard's ADR format](https://github.com/joelparkerhenderson/architecture-decision-record).
+- **`docs/adr/`** (optional, add later) — Architecture Decision Records, one short markdown file per significant decision (e.g., `0001-use-fastapi.md`, `0002-monorepo-with-services.md`, `0003-database-per-service.md`). Standard template: [Michael Nygard's ADR format](https://github.com/joelparkerhenderson/architecture-decision-record).
 
 ---
 
@@ -412,8 +539,10 @@ Each tool gets its own config file:
 
 **Add when needed:**
 - A second service — just `mkdir backend/<new_service>/` and mirror the structure.
+- `<service>/db/`, `<service>/models/`, `<service>/migrations/` — when a service needs persistence.
+- `<service>/repositories/` — when query logic in that service starts duplicating.
 - `frontend/` — when stack is chosen.
-- `docker-compose.yml` — when there are 2+ runnable things to compose.
+- `docker-compose.yml` — when there are 2+ runnable things to compose (e.g., service + database).
 - `models/<service>/` artifacts — when training produces them.
 - Per-service `requirements.txt` — only when one venv genuinely can't satisfy all services.
 - `docs/adr/` — when decisions worth recording accumulate.
@@ -442,6 +571,7 @@ Each of these is a *future* decision. The current structure makes all of them st
 - [Cookiecutter Data Science](https://cookiecutter-data-science.drivendata.org/)
 - [Hugging Face transformers examples](https://github.com/huggingface/transformers/tree/main/examples)
 - [Netflix Dispatch](https://github.com/Netflix/dispatch)
+- [Alembic — SQLAlchemy migrations](https://alembic.sqlalchemy.org/)
 - [Hydra (config management)](https://hydra.cc/)
 - [DVC (data + model versioning)](https://dvc.org/)
 - [Architecture Decision Records](https://github.com/joelparkerhenderson/architecture-decision-record)
