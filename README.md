@@ -10,13 +10,17 @@ This repo is a GitHub template. Click **"Use this template"** to create a new re
 
 1. Click **"Use this template"** → **"Create a new repository"** at the top of this page.
 2. Clone your new repo locally.
-3. Pick a pattern and run the matching bootstrap script:
+3. Go into the Project. Pick a pattern and run the matching bootstrap script:
 
    ```bash
+   cd AI-Project-Template
+   
    # Single-service: one focused product, one Python package.
+   chmod +x bootstrap_single.sh
    bash bootstrap_single.sh
 
    # Multi-service: monorepo of independent backend services.
+   chmod +x bootstrap_multi.sh
    bash bootstrap_multi.sh
    ```
 
