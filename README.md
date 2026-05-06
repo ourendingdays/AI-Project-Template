@@ -1,6 +1,6 @@
 # Project Template for AI Projects
 
-A starter structure for AI / ML / data-science projects. Two patterns are supported: a **single-service** layout for one focused product, and a **multi-service monorepo** for projects that may grow into several backend services behind a unified frontend.
+A starter structure for AI / ML / Data-Science projects. Two patterns are supported: a **single-service** layout for one focused product, and a **multi-service monorepo** for projects that may grow into several backend services behind a unified frontend.
 
 This repo is a GitHub template. Click **"Use this template"** to create a new repo from it, then run one of the bootstrap scripts.
 
@@ -31,12 +31,25 @@ This repo is a GitHub template. Click **"Use this template"** to create a new re
 
    ```bash
    cd backend
-   python -m venv .venv
-   source .venv/bin/activate
-   pip install -r requirements-dev.txt
-   python -m <your_pkg>.api.main
+   python -m venv venv
+   source venv/bin/activate
+   pip install -r requirements.txt
+
+   # Dev server (single-service):
+   flask --app your_pkg.api.main run --host 0.0.0.0 --port 8000
+
+   # Dev server (multi-service):
+   flask --app service_a.api.main run --host 0.0.0.0 --port 8000
+   ```
+
+   Then in an other terminal:
+
+   ```bash
    curl http://localhost:8000/health
    ```
+
+   You should get `{"status": "ok"}`.
+
 
 6. Replace this README with one for your actual project.
 

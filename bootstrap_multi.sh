@@ -73,7 +73,7 @@ EOF
 # --- backend/ ---
 mkdir -p backend
 cat > backend/requirements.txt <<'EOF'
-# Runtime dependencies for ALL backend services.
+# Dependencies for ALL backend services.
 flask==3.1.3
 gunicorn==25.3.0
 pydantic>=2.0
@@ -84,13 +84,6 @@ anthropic>=0.40
 # sqlalchemy>=2.0
 # alembic>=1.13
 # psycopg2-binary>=2.9
-EOF
-
-cat > backend/requirements-dev.txt <<'EOF'
--r requirements.txt
-pytest>=8.0
-ruff>=0.6
-mypy>=1.10
 EOF
 
 cat > backend/Dockerfile <<'EOF'
@@ -113,21 +106,21 @@ for sub in api core db models repositories services ml_models clients schemas ut
   touch backend/$SERVICE/$sub/__init__.py
 done
 
-# A minimal runnable Flask api/main.py
+# A minimal Flask api/main.py
 cat > backend/$SERVICE/api/main.py <<'EOF'
 from flask import Flask, jsonify
 
 app = Flask(__name__)
 
 
+@app.get("/")
+def home():
+    return jsonify({"status": "ok", "message": "service_a is running"})
+
+
 @app.get("/health")
-def health() -> tuple:
-    return jsonify({"status": "ok"}), 200
-
-
-if __name__ == "__main__":
-    # Development: flask's built-in server. Use gunicorn in production.
-    app.run(host="0.0.0.0", port=8000, debug=True)
+def health():
+    return jsonify({"status": "ok"})
 EOF
 
 # A minimal core/config.py
@@ -142,22 +135,6 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-EOF
-
-# --- backend/tests/ ---
-mkdir -p backend/tests/$SERVICE
-touch backend/tests/__init__.py
-touch backend/tests/$SERVICE/__init__.py
-
-cat > backend/tests/$SERVICE/test_health.py <<'EOF'
-from service_a.api.main import app
-
-
-def test_health() -> None:
-    client = app.test_client()
-    response = client.get("/health")
-    assert response.status_code == 200
-    assert response.get_json() == {"status": "ok"}
 EOF
 
 # --- ml/ ---
@@ -250,9 +227,11 @@ echo "✅ Skeleton created."
 echo ""
 echo "Next steps:"
 echo "  1. Replace 'service_a' with your real service name (rename folder + grep)."
-echo "  2. cd backend && python -m venv .venv && source .venv/bin/activate"
-echo "  3. pip install -r requirements-dev.txt"
-echo "  4. Run dev server:    python -m service_a.api.main"
-echo "     Run via gunicorn:  gunicorn service_a.api.main:app --bind 0.0.0.0:8000"
-echo "  5. Run tests:         pytest tests/"
-echo "  6. Review docs/project-structure.md for the full pattern."
+echo "  2. cd backend && python -m venv venv && source venv/bin/activate"
+echo "  3. pip install -r requirements.txt"
+echo "  4. Run dev server (auto-reload):"
+echo "       flask --app service_a.api.main run --host 0.0.0.0 --port 8000"
+echo "  5. Run via gunicorn (production-style):"
+echo "       gunicorn service_a.api.main:app --bind 0.0.0.0:8000"
+echo "  6. Verify:"
+echo "       curl http://127.0.0.1:8000/health"
