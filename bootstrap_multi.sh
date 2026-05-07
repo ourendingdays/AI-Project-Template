@@ -106,19 +106,21 @@ for sub in api core db models repositories services ml_models clients schemas ut
   touch backend/$SERVICE/$sub/__init__.py
 done
 
-# A minimal Flask api/main.py
+# A minimal Flask api/main.py — routes prefixed with /your_pkg/ for namespacing
+# behind a reverse proxy. Trailing slash on the home route lets both
+# /your_pkg and /your_pkg/ work.
 cat > backend/$SERVICE/api/main.py <<'EOF'
 from flask import Flask, jsonify
 
 app = Flask(__name__)
 
 
-@app.get("/")
+@app.get("/service_a/")
 def home():
     return jsonify({"status": "ok", "message": "service_a is running"})
 
 
-@app.get("/health")
+@app.get("/service_a/health")
 def health():
     return jsonify({"status": "ok"})
 EOF

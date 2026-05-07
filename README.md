@@ -37,7 +37,7 @@ This repo is a GitHub template. Click **"Use this template"** to create a new re
 
    # Dev server (single-service):
    flask --app your_pkg.api.main run --host 0.0.0.0 --port 8000
-   # OR more prodction-ready
+   # OR more production-ready
    gunicorn --bind 127.0.0.1:8000 your_pkg.api.main:app
 
    # Dev server (multi-service):
@@ -46,10 +46,14 @@ This repo is a GitHub template. Click **"Use this template"** to create a new re
    gunicorn --bind 127.0.0.1:8000 service_a.api.main:app
    ```
 
-   Then in an other terminal:
+   Then in an other terminal verify response:
 
    ```bash
-   curl http://localhost:8000/health
+   # Multi architecture
+   curl http://localhost:8000/service_a/health
+
+   # Single architecture
+   curl http://localhost:8000/your_pkg/health
    ```
 
    You should get `{"status": "ok"}`.
