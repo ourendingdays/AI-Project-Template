@@ -1,8 +1,16 @@
 # Project Template for AI Projects
 
-A starter structure for AI / ML / Data-Science projects. Two patterns are supported: a **single-service** layout for one focused product, and a **multi-service monorepo** for projects that may grow into several backend services behind a unified frontend.
+A starter structure for an application-, as well as research-like AI / ML / Data-Science projects. Simply run the script and enjoy meticulously thought of project file,- folder architecture that encompasses most of the daily stuff you need.
 
-This repo is a GitHub template. Click **"Use this template"** to create a new repo from it, then run one of the bootstrap scripts.
+For AI applications, 2  patterns are supported: 
+   - a **single-service** layout for one focused product, (<i>bootstrap_single</i>)
+   - and a **multi-service monorepo** for projects that may grow into several backend services behind a unified frontend (<i>bootstrap_multi</i>)
+
+For ML Research project, 1 pattern is available 
+
+This repo is a <i>GitHub template</i>. If you do not want to download or pull the repo, you can then click **"Use this template"** to create a new repo from it, then run one of the bootstrap scripts.
+
+Of coarse, not everything is presented withing the scripts, many things are missing and some stuff uses packages not common for some developers. Feel freee to add, change, rename and further develop the repo.
 
 ---
 
@@ -20,6 +28,10 @@ This repo is a GitHub template. Click **"Use this template"** to create a new re
    bash bootstrap_single.sh
 
    # Multi-service: monorepo of independent backend services.
+   chmod +x bootstrap_multi.sh
+   bash bootstrap_multi.sh
+
+   # ML-research: focus on data-driven research and problem solving.
    chmod +x bootstrap_multi.sh
    bash bootstrap_multi.sh
    ```
