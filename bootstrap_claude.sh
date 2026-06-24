@@ -121,39 +121,52 @@ cat > CLAUDE.local.md  <<'EOF'
 EOF
 
 cat > mcp.json <<'EOF'
-# mcp.json
+// mcp.json
 EOF
 
-# 
 
-mkdir -p $PKG/.claude
-mkdir -p $PKG/.claude/{rules,commands,skills,agents,hooks}
-mkdir -p $PKG/.claude/skills/TEST
+mkdir -p .claude
+mkdir -p .claude/{rules,commands,skills,agents,hooks}
+mkdir -p .claude/skills/TEST
 
-touch $PKG/.claude/settings.json
-touch $PKG/.claude/settings.local.json
+touch .claude/settings.json
+touch .claude/settings.local.json
 
-touch $PKG/.claude/rules/code-style.md
-touch $PKG/.claude/rules/testing.md
+touch .claude/rules/code-style.md
+touch .claude/rules/testing.md
 
-touch $PKG/.claude/commands/review.md
+touch .claude/commands/review.md
 
-touch $PKG/.claude/skills/TEST/SKILL.md
+touch .claude/skills/TEST/SKILL.md
 
-touch $PKG/.claude/agents/TEST/SKILL.md
+touch .claude/agents/SKILL.md
 
-
-
+touch .claude/hooks/SKILL.md
 
 
 echo "✅ Claude code project skeleton created."
 echo ""
-echo "Package name: '$PKG'"
+echo "Rules created:"
+echo "  - Rules 1 "
+echo "  - Rule 2  "
+echo ""
+echo "Commands created:"
+echo "  - Command 1 "
+echo "  - Command 2"
+echo ""
+echo "Skills created:"
+echo "  - Skill 1 "
+echo "  - Skill 2 "
+echo ""
+echo "Agents created:"
+echo "  - Agent 1 "
+echo "  - Agent 2 "
+echo ""
+echo "Hooks created:"
+echo "  - Hook 1 "
+echo "  - Hook 2 "  
 echo ""
 echo "Next steps:"
-echo "  1. Rename '$PKG' to your real package name if desired:"
-echo "       mv $PKG <newname>"
-echo "       grep -rl '$PKG' . | xargs sed -i 's/$PKG/<newname>/g'"
-echo "  2. Run the claude in your project to update CLAUDE.md if needed
-            .claude
-
+echo "  1. Run the claude in your project to update CLAUDE.md if needed
+            .claude "
+echo ""
