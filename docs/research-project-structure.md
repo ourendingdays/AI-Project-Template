@@ -1,10 +1,10 @@
-# Project Structure — Library / Research Project
+# Project Structure — Research Project
 
 This is the reference document for a Python project organized as a **library or research codebase** rather than a deployed application. No backend, no frontend, no HTTP server — just Python code organized by capability, runnable as scripts or importable as modules.
 
 ---
 
-## Overview: Library / Research Project
+## Overview: Research Project
 
 This pattern is for projects where the deliverable is **the code itself**: a Python library, a research/experiment codebase, a model-training pipeline, a CLI tool. Things you `import`, run as scripts, or pull into a notebook — not things you deploy as a long-running service behind nginx.
 
@@ -123,31 +123,6 @@ your-project/
 
 This section covers the major structural decisions. Differences from the service-oriented patterns are flagged explicitly.
 
-### Why one package (`app/`), not `src/`
-
-The screenshot version uses `src/` as the package name, so every file starts with `from src.rag.retriever import ...`. The `src.` prefix is meaningless noise — repeated everywhere, telling you nothing.
-
-Renaming `src/` to a real package name (`app/`, or better, your project's actual name) means imports read like `from ragkit.retriever import ...` — they tell you what package they belong to. Same effort, much cleaner.
-
-Use `src/` only if you intend to use the formal "src layout" with a `pyproject.toml` and `pip install -e .`. For a flat-layout `requirements.txt`-only project (this one), name the package directly.
-
-### Why organized by capability, not by role
-
-Compare:
-
-| Service pattern (`backend/<service>/`) | Library pattern (`app/`) |
-|---|---|
-| `api/` — HTTP layer | `core/` — LLM abstractions |
-| `services/` — business logic | `prompts/` — prompt design |
-| `clients/` — external APIs | `rag/` — retrieval |
-| `schemas/` — Pydantic | `processing/` — data prep |
-
-The service pattern names folders by their *role in an HTTP request lifecycle*. Makes sense when you're building an API — you need to know what's the entry point, what's business logic, what's data validation.
-
-The library pattern names folders by *capability* — what does this part of the system do? Makes sense when there's no HTTP request lifecycle and someone exploring the code wants to find "the embedding stuff" or "the prompt stuff" directly.
-
-If you ever add an API to this project, you'd add a single `app/api/` module that orchestrates these capabilities — *not* restructure everything into the service shape.
-
 ### Why `experiments/` is separate from `app/config/`
 
 Same distinction as in the service patterns:
@@ -184,11 +159,8 @@ The screenshot version splits these, and it's a good idea:
 
 You run `pytest tests/unit/` constantly during development. You run `pytest tests/integration/` in CI or before merging. The split lets you do that.
 
-### Why no `backend/` or `frontend/`
 
-Because this pattern is *explicitly not* a deployed service. If your project needs an HTTP API, a UI, or production deployment, you're in the wrong pattern — use the single-service or multi-service template instead.
-
-### Why `Dockerfile` and `docker-compose.yml` are still present
+### Why `Dockerfile`
 
 For **reproducibility**, not deployment. They let you (or someone else) run your library / experiments in an identical environment regardless of OS. Use it like:
 

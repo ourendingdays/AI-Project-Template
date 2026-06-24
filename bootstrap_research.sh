@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# bootstrap_library.sh — Create the library/research project skeleton.
+# bootstrap_research.sh — Create the library/research project skeleton.
 # Run from the repo root. Idempotent: safe to re-run.
 
 set -euo pipefail
