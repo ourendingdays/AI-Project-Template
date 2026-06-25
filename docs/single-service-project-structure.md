@@ -272,7 +272,7 @@ psycopg2-binary>=2.9       # or asyncpg for async; or pymysql for MySQL
 
 ## Dependency Management
 
-This project uses `requirements.txt` files. No `pyproject.toml`. No package install step.
+This project uses `requirements.txt` files. 
 
 ### Layout
 
@@ -437,17 +437,6 @@ CMD ["uvicorn", "your_pkg.api.main:app", "--host", "0.0.0.0"]
 ```
 
 Your `docker-compose.yml` will orchestrate the backend container, the database container, and (eventually) the frontend.
-
----
-
-## Tool Configuration
-
-Each tool gets its own config file:
-
-- `backend/pytest.ini` — pytest configuration
-- `backend/ruff.toml` — ruff linter/formatter config
-- `backend/mypy.ini` — mypy type checker config
-- `backend/alembic.ini` — alembic configuration (only if using a database)
 
 ---
 

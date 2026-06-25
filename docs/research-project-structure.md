@@ -150,7 +150,7 @@ You run `pytest tests/unit/` constantly during development. You run `pytest test
 
 ## Dependency Management
 
-Single `requirements.txt`. No `pyproject.toml`, no `requirements-dev.txt` split.
+Single `requirements.txt` file
 
 ```
 flask  # ONLY if you eventually add a thin API layer — usually omit

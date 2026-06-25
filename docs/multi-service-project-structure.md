@@ -270,7 +270,7 @@ psycopg2-binary>=2.9       # or asyncpg for async; or pymysql for MySQL
 
 ## Dependency Management
 
-This project uses `requirements.txt` files. No `pyproject.toml`. No package install step.
+This project uses `requirements.txt` files.
 
 ### Layout
 
@@ -460,17 +460,6 @@ For multiple services, you can either:
 - Build per-service images later when services diverge enough to justify it.
 
 Your `docker-compose.yml` will orchestrate the service containers, the database containers (one per service that needs persistence), and the frontend.
-
----
-
-## Tool Configuration
-
-Each tool gets its own config file:
-
-- `backend/pytest.ini` — pytest configuration
-- `backend/ruff.toml` — ruff linter/formatter config
-- `backend/mypy.ini` — mypy type checker config
-- `backend/<service>/alembic.ini` — alembic configuration, per service that uses a database
 
 ---
 

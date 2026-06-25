@@ -8,7 +8,7 @@ For AI applications, 2  patterns are supported:
 
 For ML Research project, 1 pattern is available:
    - Longer version, suitable for a long research : <i>bootstrap_research</i>, covered [here](docs/research-project-structure.md)
-   - Shorter version, usual Data Science code Project structure : <i>bootstrap_research_short</i>, covered [here](docs/research-project-structure-short.md)
+   - Shorter version, usual Data Science code Project structure : <i>bootstrap_research_ml</i>, covered [here](docs/research-ml-project-structure.md)
 
 Claude code project Structure, that lets you fast on your feet with the most basic and needed skills, agents and rules
    - <i>bootstrap_claude</i>, described [here](docs/claude-code-project-structure.md)

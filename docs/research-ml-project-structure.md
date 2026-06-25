@@ -1,6 +1,6 @@
 # Project Structure — Research Project
 
-This is the reference document for a Python project organized as a **research codebase**. No backend, no frontend, no HTTP server — just Python code for Data science : analyse data, run notebook, etc.
+This is the reference document for a Python project organized as a **research codebase** for Machine Learning. No backend, no frontend, no HTTP server — just Python code for Data science : analyse data, run notebook, etc.
 
 ---
 
@@ -44,8 +44,7 @@ your-project/
 │   │   └── train.py
 │   ├── evaluation/              # eval scripts and metrics
 │   │   ├── __init__.py
-│   │   ├── metrics.py
-│   │   └── benchmarks.py
+│   │   └──  metrics.py
 │
 ├── experiments/                 # YAML configs for experiment runs
 │   └── exp_001.yaml
@@ -63,15 +62,6 @@ your-project/
 │
 ├── models/                      # trained model artifacts (gitignored)
 │   └── README.md
-│
-├── scripts/                     # CLI entry points for common tasks
-│   ├── setup_env.sh
-│   ├── build_embeddings.py
-│   └── run_eval.py
-│
-└── docs/
-    ├── project-structure.md     # this file
-    └── architecture.md
 ```
 
 ---
@@ -124,16 +114,6 @@ pip freeze > requirements.lock
 ## Workflow & How Imports Work
 
 > **Always run Python commands from the project root.**
-
-### Why this rule exists
-
-Your code does:
-
-```python
-# Inside src/..
-from src.base_model import BaseModel
-from src.processing.chunking import chunk_text
-```
 
 Python adds the current working directory to its module search path. With `src/` directly under the project root, running from the root means Python finds `src/` and imports work. Running from anywhere else → `ModuleNotFoundError`.
 
