@@ -144,7 +144,7 @@ class BaseLLM(ABC):
     @abstractmethod
     def complete(self, prompt: str, **kwargs) -> str:
         """Send a prompt, return the completion text."""
-        ...
+        pass
 EOF
 
 # A minimal config/settings.py
