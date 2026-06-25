@@ -93,6 +93,38 @@ pip install -r requirements.txt
 
 ---
 
+
+habits that make Claude Code more reliable in practice:
+
+
+1---- Don’t turn CLAUDE. md into a giant instruction dump
+
+Use it for stable things: project context, architecture notes, conventions, important commands.
+
+If something is really a repeatable procedure, checklist, or playbook, it usually belongs somewhere else.
+
+
+2---- Use Plan Mode before bigger changes
+
+For multi-file edits, refactors, or anything slightly messy, it is usually safer to let Claude inspect and plan first before touching code.
+
+
+3---- Turn repeated prompts into skills
+
+If you keep typing the same “review this,” “debug this,” or “prepare this for deploy” instructions, that is usually a sign the workflow should become reusable instead of rewritten every time.
+
+
+4---- Use hooks for things that should happen every time
+
+Formatting, validation, guardrails, notifications - anything deterministic is better handled by the system than by hoping the model remembers.
+
+
+The more useful shift, to me, is moving the right things out of the prompt and into the environment.
+
+That’s where repeated prompting starts turning into structure.
+
+---
+
 ## References
 
 - [Anthropic Academy](https://www.anthropic.com/learn)

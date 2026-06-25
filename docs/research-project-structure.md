@@ -45,7 +45,7 @@ your-project/
 │   ├── __init__.py
 │   ├── core/                    # LLM abstractions, base classes, model factory
 │   │   ├── __init__.py
-│   │   ├── base_llm.py
+│   │   ├── base_model.py
 │   │   ├── model_factory.py
 │   │   └── clients/             # provider-specific clients
 │   │       ├── __init__.py
@@ -130,8 +130,6 @@ Same distinction as in the service patterns:
 - **`experiments/<name>.yaml`** — describes a *training/evaluation run*. Hyperparameters, dataset version, model size. Checked in, versioned, reproducible.
 - **`app/config/settings.py`** — describes the *running app*. API keys, log levels, paths. Loaded from environment variables (via `.env`), never committed.
 
-The screenshot version had a single `config/` folder mixing both. Don't do that.
-
 ### Why `notebooks/` is at the root, not inside `app/`
 
 Different from the service patterns. Here's why:
@@ -151,8 +149,6 @@ Same reason as in the service patterns:
 Both are gitignored. Commit the *code* that produces them, not the artifacts themselves. When you outgrow local files, `data/` points at a data warehouse / DVC remote and `models/` points at a model registry (W&B, MLflow, Hugging Face Hub).
 
 ### Why `tests/` has `unit/` and `integration/`
-
-The screenshot version splits these, and it's a good idea:
 
 - **`tests/unit/`** — tests individual functions in isolation. Fast. No network. No real model calls.
 - **`tests/integration/`** — tests the system end-to-end. Slow. May call real APIs. May require setup.
@@ -213,7 +209,7 @@ Your code does:
 
 ```python
 # Inside app/rag/retriever.py
-from app.core.base_llm import BaseLLM
+from app.core.base_model import BaseModel
 from app.processing.chunking import chunk_text
 ```
 

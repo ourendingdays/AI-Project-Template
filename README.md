@@ -3,14 +3,20 @@
 A starter structure for an application-, as well as research-like AI / ML / Data-Science projects. Simply run the script and enjoy meticulously thought of project file,- folder architecture that encompasses most of the daily stuff you need.
 
 For AI applications, 2  patterns are supported: 
-   - a **single-service** layout for one focused product, (<i>bootstrap_single</i>)
-   - and a **multi-service monorepo** for projects that may grow into several backend services behind a unified frontend (<i>bootstrap_multi</i>)
+   - a **single-service** layout for one focused product :  <i>bootstrap_single</i> covered [here](docs/single-service-project-structure.md)
+   - and a **multi-service monorepo** for projects that may grow into several backend services behind a unified frontend : <i>bootstrap_multi</i>, covered [here](docs/multi-service-project-structure.md))
 
-For ML Research project, 1 pattern is available 
+For ML Research project, 1 pattern is available:
+   - Longer version, suitable for a long research : <i>bootstrap_research</i>, covered [here](docs/research-project-structure.md)
+   - Shorter version, usual Data Science code Project structure : <i>bootstrap_research_short</i>, covered [here](docs/research-project-structure-short.md)
 
+Claude code project Structure, that lets you fast on your feet with the most basic and needed skills, agents and rules
+   - <i>bootstrap_claude</i>, described [here](docs/claude-code-project-structure.md)
+
+   
 This repo is a <i>GitHub template</i>. If you do not want to download or pull the repo, you can then click **"Use this template"** to create a new repo from it, then run one of the bootstrap scripts.
 
-Of coarse, not everything is presented withing the scripts, many things are missing and some stuff uses packages not common for some developers. Feel freee to add, change, rename and further develop the repo.
+Of course, not everything is presented withing the scripts, many things are missing and some stuff uses packages not common for some developers. Feel freee to add, change, rename and further develop the repo.
 
 ---
 
@@ -39,7 +45,7 @@ Of coarse, not everything is presented withing the scripts, many things are miss
    Each script is idempotent — it lays down folders, stub files, `.gitignore`, `.env.example`, and a runnable Flask + gunicorn skeleton.
 
 4. **Rename the placeholder** (`your_pkg` for single-service, `service_a` for multi-service) to your real package or service name. Use a valid Python identifier — lowercase, no hyphens.
-5. Set up the venv and verify it runs:
+5. Set up the venv and verify it runs (for service architectures):
 
    ```bash
    cd backend
@@ -81,9 +87,11 @@ The full layout, conventions, and rationale (why services are siblings, why `mod
 
 - [`docs/single-service-project-structure.md`](docs/single-service-project-structure.md)
 - [`docs/multi-service-project-structure.md`](docs/multi-service-project-structure.md)
-- `*-toml.md` variants of each, for projects that prefer a minimal `pyproject.toml`.
+- [`docs/research-project-structure.md`](docs/research-project-structure.md)
+- [`docs/research-project-structure-short.md`](docs/research-project-structure-short.md)
+- [`docs/claude-code-project-structure.md`](docs/claude-code-project-structure.md)
 
-Defaults baked into the bootstraps: Flask + gunicorn, `requirements.txt` (no `pyproject.toml`), flat layout (no `src/` folder), one venv per area.
+Defaults baked into the bootstraps: Flask + gunicorn, `requirements.txt`, etc.
 
 ---
 
