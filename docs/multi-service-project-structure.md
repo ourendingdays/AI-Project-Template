@@ -108,25 +108,6 @@ These three live different lives:
 | Deploy frequency | every change | once per experiment | every UI change |
 | Dependencies | fastapi, anthropic SDK | torch, transformers, datasets | react, next.js |
 
-If you mash them together:
-
-- Your serving Docker image pulls in **gigabytes** of training-only dependencies (PyTorch alone is ~2GB) that the API never uses. Slower builds, slower deploys, bigger attack surface, more security patches.
-- A frontend developer touching a button has to wait for Python tests to pass in CI.
-- A change to a training script triggers redeploy of the production API.
-- Versioning becomes confusing — does "v1.2.0" mean the model, the API, or the UI?
-
-Separating them means each piece can be built, tested, deployed, and versioned independently. This is the pattern in nearly every production MLOps reference architecture (Hugging Face's `transformers/examples`, Cookiecutter Data Science, Made With ML).
-
-### Why services are siblings under `backend/` (not nested under one package)
-
-Two unrelated capabilities should not share a codebase namespace. Putting them as siblings (`backend/service_a/`, `backend/service_b/`) means:
-
-- Each service's code is self-contained and understandable in isolation.
-- Adding a new service is just `mkdir backend/<new>/` — no central package to modify.
-- If a service later outgrows the monorepo and needs its own deployment, image, or repo, you move one folder. No untangling required.
-- Code review and ownership stay clean: a PR touching one service's files doesn't accidentally affect another.
-
-The alternative (everything under one wrapper package with subpackages) is better when services are **tightly coupled** and share lots of code. For loosely-related services that just happen to live in the same repo, sibling folders are cleaner.
 
 ### Why `models/` is separate from `data/`
 
@@ -135,31 +116,13 @@ They look similar (both are "blob-like artifacts"), but they're fundamentally di
 - **`data/`** = **inputs** to your ML pipeline. Datasets, feature files, raw text dumps. Things you feed into training.
 - **`models/`** = **outputs** of your ML pipeline. Trained weights. Things training produces.
 
-Why this matters in practice:
-
-- **Different versioning needs.** Datasets change rarely and are huge. Model checkpoints change often (every training run produces new ones) and are also huge but in different ways.
-- **Different access patterns.** Data is read by training jobs. Models are read by the serving API.
-- **Different governance.** Data may have privacy/legal constraints (PII, licensing). Models have IP/security concerns (weight leaks, model theft).
-- **Different "next steps".** When you outgrow local files, `data/` typically points at a data warehouse or DVC remote; `models/` typically points at a model registry (MLflow, W&B, Hugging Face Hub, S3 with versioning).
-
-Putting them in one folder muddles all of this. Two folders cost you nothing and keep the distinction clear. Both are further split by service so each service's data and models are isolated.
-
 > **Note:** the top-level `data/` and `models/` folders are for *ML* data and *ML* model artifacts — the static files used by training and the trained weights it produces. They are *not* the same thing as a service's runtime database. See the Database section below for that.
 
 ### Why `notebooks/` lives inside `ml/<service>/`, not at the repo root
 
-A `notebooks/` folder at the root signals "notebooks are first-class citizens of this project." That's a trap.
+Notebooks are **excellent for exploration** — trying a new library, plotting a dataset, sanity-checking a model.The healthy pattern is: **prototype in a notebook → once it works, move the real code into `ml/<service>/training/`, `ml/<service>/evaluation/`, or `backend/<service>/ml_models/`**. The notebook becomes a record of how you got there, not the place where the logic lives.
 
-Notebooks are **excellent for exploration** — trying a new library, plotting a dataset, sanity-checking a model. They're **terrible as the source of truth** for production code:
-
-- They hide execution state (you can run cells out of order and get different results).
-- They're a nightmare in code review (the JSON file changes when you scroll, click, or just re-run).
-- They can't be unit-tested easily.
-- They mix code, output, and prose in ways that don't survive into production.
-
-The healthy pattern is: **prototype in a notebook → once it works, move the real code into `ml/<service>/training/`, `ml/<service>/evaluation/`, or `backend/<service>/ml_models/`**. The notebook becomes a record of how you got there, not the place where the logic lives.
-
-Putting notebooks inside the relevant service folder under `ml/` signals exactly this: they belong to the experimentation phase of a specific service, not the running application. Hugging Face, fast.ai, and most serious ML repos follow this convention.
+They belong to the experimentation phase of a specific service, not the running application. Hugging Face, fast.ai, and most serious ML repos follow this convention.
 
 ### Why requirements files are split between `backend/` and `ml/` (but combined within each)
 
@@ -168,16 +131,7 @@ Same reason as the `backend/`-vs-`ml/` split, applied to dependencies:
 - `backend/requirements.txt` lists what the **APIs at runtime** need — small, focused, ships in the production Docker image. Combined for all backend services.
 - `ml/requirements.txt` lists what **training** needs — huge, includes development tools like Weights & Biases, only used on the training machine. Combined for all ML pipelines.
 
-If you put everything in one project-wide `requirements.txt`:
-
-- Your serving image installs `wandb`, `tensorboard`, `jupyterlab`, full PyTorch with CUDA, etc. — none of which it uses.
-- Build time goes from 30 seconds to 10 minutes.
-- Image size goes from ~200 MB to several gigabytes.
-- Every training-tool security advisory affects your production API.
-
-**Why combined within `backend/` rather than per-service**: for a solo project, you'll naturally keep common libraries (FastAPI, Pydantic, Anthropic SDK, SQLAlchemy) at the same version across services. One combined file means one venv, one `pip install`, one place to upgrade. The cost is that *if* two services ever need genuinely conflicting versions of the same library, you're stuck — but that's vanishingly rare in solo work, and the structure can be split per-service later if it ever happens.
-
-(`frontend/` will get its own dependency manifest when you add it — `package.json` for npm/pnpm. Same principle: frontend deps don't belong in Python files.)
+If you put everything in one project-wide `requirements.txt`, build time goes from 30 seconds to 10 minutes. Image size goes from ~200 MB to several gigabytes.
 
 ### Why split each service into `api/`, `core/`, `db/`, `models/`, `services/`, etc.
 
@@ -548,19 +502,6 @@ Each tool gets its own config file:
 - `docs/adr/` — when decisions worth recording accumulate.
 
 Premature structure is almost as bad as no structure. The goal is a tree that *can* grow into the full thing without rewrites — not one fully built on day one.
-
----
-
-## When to graduate to a stricter setup
-
-The current setup (one venv per area, combined requirements, no `pyproject.toml`) is right for a solo project that's still finding its shape. Watch for these signals that it's time to evolve:
-
-- **Per-service venvs**: when services need conflicting library versions, or when one service has heavy deps another doesn't.
-- **Per-service Dockerfiles**: when image sizes diverge significantly or services need different base images (e.g., one needs CUDA, the other doesn't).
-- **`pyproject.toml` per service**: when you want to publish a service as a library, or when you want strict dependency isolation enforced by tooling.
-- **Splitting into separate repos**: when a service has its own team, its own release cycle, and its own deployment story that has nothing to do with the others.
-
-Each of these is a *future* decision. The current structure makes all of them straightforward to adopt later — that's the whole point.
 
 ---
 

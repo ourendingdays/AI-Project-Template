@@ -1,6 +1,6 @@
 # Project Structure — Research Project
 
-This is the reference document for a Python project organized as a **library or research codebase** rather than a deployed application. No backend, no frontend, no HTTP server — just Python code organized by capability, runnable as scripts or importable as modules.
+This is the reference document for a Python project organized as a **library or research codebase** - Python code organized by capability, runnable as scripts or importable as modules.
 
 ---
 
@@ -22,9 +22,6 @@ For a focused Python project, this pattern gives you:
 - **Capability-based organization** — folders named for what they *do* (`rag/`, `inference/`, `processing/`), not for what *role* they play in a service architecture (`api/`, `services/`, etc.).
 - **No deployment bloat** — no `backend/`, no `frontend/`, no nginx assumptions.
 - **Easy to grow into a library** — already structured to be `pip install`-able if needed.
-
-> **Choosing between this and the service patterns:**
-> - If you'll deploy this as an HTTP API → use single-service or multi-service patterns.
 > - If users will `pip install` it, or you'll run it as scripts/notebooks → use this pattern.
 > - If you start here and later decide to add an API on top → wrap the code in a thin `api/` module that imports from `app.<whatever>`. Don't restructure everything.
 
@@ -125,14 +122,10 @@ This section covers the major structural decisions. Differences from the service
 
 ### Why `experiments/` is separate from `app/config/`
 
-Same distinction as in the service patterns:
-
 - **`experiments/<name>.yaml`** — describes a *training/evaluation run*. Hyperparameters, dataset version, model size. Checked in, versioned, reproducible.
 - **`app/config/settings.py`** — describes the *running app*. API keys, log levels, paths. Loaded from environment variables (via `.env`), never committed.
 
 ### Why `notebooks/` is at the root, not inside `app/`
-
-Different from the service patterns. Here's why:
 
 - In the **service pattern**, notebooks live inside `ml/<service>/notebooks/` because notebooks are part of the *training/research subsystem*, separate from the running service. The split makes it obvious.
 - In the **library pattern**, there's no separate service to contrast notebooks with — the whole project is research/exploration. Notebooks deserve top-level visibility because they're part of how you actually work with the project day-to-day.
@@ -140,8 +133,6 @@ Different from the service patterns. Here's why:
 Same rule applies: **notebooks are exploration only.** When code stabilizes, move it into `app/<something>/`. The notebook becomes a record, not the source of truth.
 
 ### Why `models/` and `data/` are top-level, not inside `app/`
-
-Same reason as in the service patterns:
 
 - **`data/`** = inputs (datasets, raw text, embeddings)
 - **`models/`** = outputs (trained weights, checkpoints)
@@ -155,17 +146,6 @@ Both are gitignored. Commit the *code* that produces them, not the artifacts the
 
 You run `pytest tests/unit/` constantly during development. You run `pytest tests/integration/` in CI or before merging. The split lets you do that.
 
-
-### Why `Dockerfile`
-
-For **reproducibility**, not deployment. They let you (or someone else) run your library / experiments in an identical environment regardless of OS. Use it like:
-
-```bash
-docker compose run --rm app python -m app.training.train --config experiments/exp_001.yaml
-```
-
-…not like a production service.
-
 ---
 
 ## Dependency Management
@@ -175,13 +155,15 @@ Single `requirements.txt`. No `pyproject.toml`, no `requirements-dev.txt` split.
 ```
 flask  # ONLY if you eventually add a thin API layer — usually omit
 anthropic>=0.40
+datasets>=2.20
+matplotlib>=3.11.0
 openai>=1.0
+pandas>=3.0.3
 pydantic>=2.0
 pydantic-settings>=2.0
+scikit-learn>=1.9.0
 torch>=2.4
 transformers>=4.40
-datasets>=2.20
-faiss-cpu  # or another vector store
 # Testing / lint — add as needed
 pytest>=8.0
 ruff>=0.6
@@ -199,7 +181,7 @@ pip freeze > requirements.lock
 
 ## Workflow & How Imports Work
 
-Flat layout, no `src/`, no installed package. Same rule as the service patterns:
+Flat layout, no `src/`, no installed package.
 
 > **Always run Python commands from the project root.**
 
@@ -214,8 +196,6 @@ from app.processing.chunking import chunk_text
 ```
 
 Python adds the current working directory to its module search path. With `app/` directly under the project root, running from the root means Python finds `app/` and imports work. Running from anywhere else → `ModuleNotFoundError`.
-
-There's no `pyproject.toml` and no `pip install -e .` — same trade-off as the service patterns.
 
 ### Setting up the project
 

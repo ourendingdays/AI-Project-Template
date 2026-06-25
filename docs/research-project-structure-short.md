@@ -105,12 +105,12 @@ Both are gitignored. Commit the *code* that produces them, not the artifacts the
 `requirements.txt`
 
 ```
-torch>=2.4
-transformers>=4.40
 datasets>=2.20
 matplotlib>=3.11.0
 pandas>=3.0.3
 scikit-learn>=1.9.0
+torch>=2.4
+transformers>=4.40
 ```
 
 If reproducibility starts mattering (the "worked last month, now broken" problem):

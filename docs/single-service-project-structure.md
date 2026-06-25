@@ -133,31 +133,15 @@ They look similar (both are "blob-like artifacts"), but they're fundamentally di
 - **`data/`** = **inputs** to your ML pipeline. Datasets, feature files, raw text dumps. Things you feed into training.
 - **`models/`** = **outputs** of your ML pipeline. Trained weights. Things training produces.
 
-Why this matters in practice:
-
-- **Different versioning needs.** Datasets change rarely and are huge. Model checkpoints change often (every training run produces new ones) and are also huge but in different ways.
-- **Different access patterns.** Data is read by training jobs. Models are read by the serving API.
-- **Different governance.** Data may have privacy/legal constraints (PII, licensing). Models have IP/security concerns (weight leaks, model theft).
-- **Different "next steps".** When you outgrow local files, `data/` typically points at a data warehouse or DVC remote; `models/` typically points at a model registry (MLflow, W&B, Hugging Face Hub, S3 with versioning).
-
-Putting them in one folder muddles all of this. Two folders cost you nothing and keep the distinction clear.
-
 > **Note:** the top-level `data/` and `models/` folders are for *ML* data and *ML* model artifacts — the static files used by training and the trained weights it produces. They are *not* the same thing as the application's runtime database. See the Database section below for that.
 
 ### Why `notebooks/` lives inside `ml/`, not at the repo root
 
-A `notebooks/` folder at the root signals "notebooks are first-class citizens of this project." That's a trap.
-
-Notebooks are **excellent for exploration** — trying a new library, plotting a dataset, sanity-checking a model. They're **terrible as the source of truth** for production code:
-
-- They hide execution state (you can run cells out of order and get different results).
-- They're a nightmare in code review (the JSON file changes when you scroll, click, or just re-run).
-- They can't be unit-tested easily.
-- They mix code, output, and prose in ways that don't survive into production.
+Notebooks are **excellent for exploration** — trying a new library, plotting a dataset, sanity-checking a model. 
 
 The healthy pattern is: **prototype in a notebook → once it works, move the real code into `ml/training/`, `ml/evaluation/`, or `backend/your_pkg/ml_models/`**. The notebook becomes a record of how you got there, not the place where the logic lives.
 
-Putting notebooks inside `ml/` instead of at the root signals exactly this: they belong to the experimentation phase, not the running application. Hugging Face, fast.ai, and most serious ML repos follow this convention.
+They belong to the experimentation phase, not the running application.
 
 ### Why requirements files are split between `backend/` and `ml/`
 
@@ -166,16 +150,9 @@ Same reason as the `backend/`-vs-`ml/` split, applied to dependencies:
 - `backend/requirements.txt` lists what the **API at runtime** needs — small, focused, ships in the production Docker image.
 - `ml/requirements.txt` lists what **training** needs — huge, includes development tools like Weights & Biases, only used on the training machine.
 
-If you put everything in one `requirements.txt`:
-
-- Your serving image installs `wandb`, `tensorboard`, `jupyterlab`, full PyTorch with CUDA, etc. — none of which it uses.
-- Build time goes from 30 seconds to 10 minutes.
-- Image size goes from ~200 MB to several gigabytes.
-- Every training-tool security advisory affects your production API.
+If you put everything in one `requirements.txt`, build time goes from 30 seconds to 10 minutes and image size goes from ~200 MB to several gigabytes.
 
 Two files = two clean environments. The serving image is lean; the training environment has everything it needs.
-
-(`frontend/` will get its own dependency manifest when you add it — `package.json` for npm/pnpm. Same principle: frontend deps don't belong in Python files.)
 
 ### Why split `your_pkg/` into `api/`, `core/`, `db/`, `models/`, `services/`, etc.
 
@@ -198,8 +175,6 @@ This is straight from FastAPI's [full-stack-fastapi-template](https://github.com
 
 ### Why `schemas/` (Pydantic) and `models/` (SQLAlchemy) are separate
 
-They sound similar and often have classes with the same names (`User`, `Conversation`), but they describe two different worlds:
-
 - **`models/`** describes **what's stored in the database**. SQLAlchemy classes mapped to tables.
 - **`schemas/`** describes **what crosses the API boundary**. Pydantic classes that validate incoming requests and shape outgoing responses.
 
@@ -218,7 +193,7 @@ A top-level `configs/` mixes secrets with experiment hyperparameters and creates
 
 ### Why `frontend/` is a sibling of `backend/`, not nested
 
-Standard full-stack layout. The frontend and backend speak to each other over HTTP — they're peers, not parent-child. Each can be developed, tested, built, and deployed independently. Matches Vercel's examples, the FastAPI full-stack template, and most Next.js + Python combos in production.
+Standard full-stack layout. The frontend and backend speak to each other over HTTP — they're peers, not parent-child. Each can be developed, tested, built, and deployed independently.
 
 ---
 
@@ -283,16 +258,7 @@ volumes:
 
 The connection string lives in `.env` locally (and real environment variables in production), read by your `core/config.py` Pydantic settings.
 
-### Database contents are NOT the `data/` folder
-
-A common confusion worth heading off:
-
-- **`data/` folder** = static files used by ML training (CSVs, JSONL, raw scrapes). Versioned alongside the code that processes them.
-- **Database contents** = live application state (users, sessions, conversations). Lives inside the running Postgres container, backed up separately, never committed to Git.
-
-If you need to ship sample DB data with the repo (for tests, local dev), put it in `backend/tests/fixtures/` or in a `scripts/seed_db.py` script. Don't put it in the top-level `data/` folder — that's for ML.
-
-### Required dependencies (when adding a database)
+### Required dependencies, when adding a database
 
 Add to `backend/requirements.txt`:
 
@@ -511,19 +477,6 @@ Each tool gets its own config file:
 - `docs/adr/` — when decisions worth recording accumulate.
 
 Premature structure is almost as bad as no structure. The goal is a tree that *can* grow into the full thing without rewrites — not one fully built on day one.
-
----
-
-## When to graduate to a stricter (or different) setup
-
-The current setup (one package, one venv per area, combined requirements, no `pyproject.toml`) is right for a focused single-product solo project. Watch for these signals that it's time to evolve:
-
-- **Multi-service monorepo**: when you find yourself building a second, *unrelated* capability in the same repo and stuffing it awkwardly into `your_pkg/`. That's the sign to split into sibling service folders under `backend/`.
-- **`pyproject.toml`**: when you want to publish the package as a library, want strict dependency isolation enforced by tooling, or want to be able to run from any working directory (so the `cd backend/` rule no longer applies).
-- **Per-environment Dockerfiles**: when image sizes diverge significantly or you need different base images (e.g., one needs CUDA, the other doesn't).
-- **Splitting into separate repos**: when a part of the project has its own team, its own release cycle, and its own deployment story that has nothing to do with the rest.
-
-Each of these is a *future* decision. The current structure makes all of them straightforward to adopt later — that's the whole point.
 
 ---
 

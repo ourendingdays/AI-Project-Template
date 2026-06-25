@@ -74,18 +74,19 @@ EOF
 
 cat > requirements.txt <<'EOF'
 # Python dependencies for the project.
-anthropic>=0.40
-openai>=1.0
+datasets>=2.20
+matplotlib>=3.11.0
+numpy>=1.26
+pandas>=3.0.3
 pydantic>=2.0
 pydantic-settings>=2.0
+scikit-learn>=1.9.0
+torch>=2.4
+transformers>=4.40
 
-# ML / data (uncomment as needed)
-# torch>=2.4
-# transformers>=4.40
-# datasets>=2.20
-# numpy>=1.26
-# pandas>=2.0
-# scikit-learn>=1.4
+# AI Agents (uncomment as needed)
+# anthropic>=0.40
+# openai>=1.0
 
 # Vector stores (pick one when adding RAG)
 # faiss-cpu
@@ -131,8 +132,8 @@ for sub in core prompts rag processing inference training evaluation config; do
 done
 touch $PKG/core/clients/__init__.py
 
-# A minimal core/base_llm.py
-cat > $PKG/core/base_llm.py <<'EOF'
+# A minimal core/base_model.py
+cat > $PKG/core/base_model.py <<'EOF'
 """Common interface for all LLM clients."""
 from abc import ABC, abstractmethod
 
@@ -166,7 +167,7 @@ EOF
 # Stub clients
 cat > $PKG/core/clients/anthropic.py <<'EOF'
 """Anthropic client wrapper. Stub — fill in when needed."""
-from app.core.base_llm import BaseLLM
+from app.core.base_model import BaseLLM
 
 
 class AnthropicClient(BaseLLM):
