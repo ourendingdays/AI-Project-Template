@@ -119,9 +119,9 @@ Python adds the current working directory to its module search path. With `src/`
 git clone <your-repo>
 cd your-project
 
-python -m venv .venv
-source .venv/bin/activate            # macOS/Linux
-# .venv\Scripts\activate             # Windows
+python -m venv venv
+source venv/bin/activate            # macOS/Linux
+# venv\Scripts\activate             # Windows
 
 pip install -r requirements.txt
 ```

@@ -35,7 +35,7 @@ your-project/
 ├── docker-compose.yml           # orchestrates services (incl. databases); add when needed
 │
 ├── backend/
-│   ├── .venv/                   # one venv shared by all backend services (gitignored)
+│   ├── venv/                   # one venv shared by all backend services (gitignored)
 │   ├── Dockerfile
 │   ├── requirements.txt         # combined runtime deps for all services
 │   ├── requirements-dev.txt     # dev deps (pytest, ruff, mypy, ...)
@@ -61,7 +61,7 @@ your-project/
 │       └── service_a/
 │
 ├── ml/                          # everything training/experiment-related
-│   ├── .venv/                   # separate venv from backend (heavy training deps)
+│   ├── venv/                   # separate venv from backend (heavy training deps)
 │   ├── requirements.txt         # combined training deps for all services
 │   └── service_a/
 │       ├── configs/             # experiment YAMLs
@@ -349,11 +349,11 @@ cd your-project
 
 # 2. Create a virtual environment for the backend (one venv for all services)
 cd backend
-python -m venv .venv
+python -m venv venv
 
 # 3. Activate it
-source .venv/bin/activate              # macOS/Linux
-# .venv\Scripts\activate                # Windows
+source venv/bin/activate              # macOS/Linux
+# venv\Scripts\activate                # Windows
 
 # 4. Install backend dependencies
 pip install -r requirements-dev.txt
@@ -364,8 +364,8 @@ cd service_a && alembic upgrade head && cd ..
 
 # 6. Set up the ML environment separately (different deps, different machine in production)
 cd ../ml
-python -m venv .venv
-source .venv/bin/activate
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -375,7 +375,7 @@ pip install -r requirements.txt
 
 ```bash
 cd backend
-source .venv/bin/activate
+source venv/bin/activate
 
 # Run a service
 python -m service_a.api.main
@@ -407,7 +407,7 @@ mypy service_a/
 
 ```bash
 cd ml
-source .venv/bin/activate
+source venv/bin/activate
 
 python -m service_a.training.train --config service_a/configs/exp_001.yaml
 ```

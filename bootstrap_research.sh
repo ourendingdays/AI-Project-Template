@@ -255,11 +255,11 @@ cat > scripts/setup_env.sh <<'EOF'
 #!/usr/bin/env bash
 # Sets up a fresh venv with all dependencies. Run once per machine.
 set -euo pipefail
-python3 -m venv .venv
-source .venv/bin/activate
+python3 -m venv venv
+source venv/bin/activate
 pip install --upgrade pip
 pip install -r requirements.txt
-echo "✅ Environment ready. Activate with: source .venv/bin/activate"
+echo "✅ Environment ready. Activate with: source venv/bin/activate"
 EOF
 chmod +x scripts/setup_env.sh
 
@@ -298,7 +298,7 @@ echo "Next steps:"
 echo "  1. Rename '$PKG' to your real package name if desired:"
 echo "       mv $PKG <newname>"
 echo "       grep -rl '$PKG' . | xargs sed -i 's/$PKG/<newname>/g'"
-echo "  2. python -m venv .venv && source .venv/bin/activate"
+echo "  2. python -m venv venv && source venv/bin/activate"
 echo "  3. pip install -r requirements.txt"
 echo "  4. Run a test:"
 echo "       pytest tests/unit/"

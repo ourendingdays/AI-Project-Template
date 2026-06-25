@@ -182,4 +182,4 @@ EOF
 echo "✅ ML-research project skeleton created."
 echo ""
 echo "Next steps:"
-echo "  python -m venv .venv && source .venv/bin/activate"
+echo "  python -m venv venv && source venv/bin/activate"

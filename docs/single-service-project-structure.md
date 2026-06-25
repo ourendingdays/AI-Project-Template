@@ -36,7 +36,7 @@ your-project/
 ├── docker-compose.yml           # orchestrates services (incl. database); add when needed
 │
 ├── backend/
-│   ├── .venv/                   # one venv for the backend (gitignored)
+│   ├── venv/                   # one venv for the backend (gitignored)
 │   ├── Dockerfile
 │   ├── requirements.txt         # runtime deps (fastapi, anthropic, sqlalchemy, ...)
 │   ├── requirements-dev.txt     # dev deps (pytest, ruff, mypy, ...)
@@ -60,7 +60,7 @@ your-project/
 │   └── tests/
 │
 ├── ml/                          # everything training/experiment-related
-│   ├── .venv/                   # separate venv from backend (heavy training deps)
+│   ├── venv/                   # separate venv from backend (heavy training deps)
 │   ├── requirements.txt         # heavy training deps (torch, transformers, datasets, ...)
 │   ├── configs/                 # experiment YAMLs (one per run/experiment)
 │   ├── data/                    # data loading + preprocessing code
@@ -339,11 +339,11 @@ cd your-project
 
 # 2. Create a virtual environment for the backend
 cd backend
-python -m venv .venv
+python -m venv venv
 
 # 3. Activate it
-source .venv/bin/activate              # macOS/Linux
-# .venv\Scripts\activate                # Windows
+source venv/bin/activate              # macOS/Linux
+# venv\Scripts\activate                # Windows
 
 # 4. Install backend dependencies
 pip install -r requirements-dev.txt
@@ -354,8 +354,8 @@ alembic upgrade head
 
 # 6. Set up the ML environment separately (different deps, different machine in production)
 cd ../ml
-python -m venv .venv
-source .venv/bin/activate
+python -m venv venv
+source venv/bin/activate
 pip install -r requirements.txt
 ```
 
@@ -365,7 +365,7 @@ pip install -r requirements.txt
 
 ```bash
 cd backend
-source .venv/bin/activate
+source venv/bin/activate
 
 # Run the API
 python -m your_pkg.api.main
@@ -389,7 +389,7 @@ mypy your_pkg/
 
 ```bash
 cd ml
-source .venv/bin/activate
+source venv/bin/activate
 
 python training/train.py --config configs/exp_001.yaml
 ```
