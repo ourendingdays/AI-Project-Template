@@ -30,7 +30,6 @@ For a focused Python project, this pattern gives you:
 your-project/
 ├── README.md
 ├── .gitignore
-├── .env.example                 # template for env vars; never commit .env itself
 ├── requirements.txt             # all Python dependencies
 │
 ├── src/                         # main package — rename to your project name
@@ -54,11 +53,8 @@ your-project/
 │
 ├── data/                        # gitignored except README + .gitkeep files
 │   ├── raw/                     # immutable original data
-│   ├── interim/                 # intermediate processing artifacts
-│   ├── processed/               # final data fed into models
-│   ├── cache/                   # cached computations
-│   ├── embeddings/              # generated vector embeddings
-│   └── vectordb/                # vector database files
+│   ├── train/                   # training 
+│   ├── test/                    # test data 
 │
 ├── models/                      # trained model artifacts (gitignored)
 │   └── README.md
