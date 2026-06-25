@@ -152,8 +152,8 @@ When code stabilizes here, move it into a proper module under `app/<capability>/
 EOF
 
 # --- data/ ---
-mkdir -p data/{raw,interim,processed,cache,embeddings,vectordb}
-for sub in raw interim processed cache embeddings vectordb; do
+mkdir -p data/{raw,train,test}
+for sub in raw train test ; do
   touch data/$sub/.gitkeep
 done
 
@@ -163,11 +163,8 @@ cat > data/README.md <<'EOF'
 **All contents are gitignored** — only the structure and this README are tracked.
 
 - `raw/` — immutable original data, never edited
-- `interim/` — intermediate processing artifacts
-- `processed/` — final data fed into models
-- `cache/` — cached computations
-- `embeddings/` — generated vector embeddings
-- `vectordb/` — vector database files
+- `train/` — intermediate processing artifacts
+- `test/` — final data fed into models
 EOF
 
 # --- models/ ---
@@ -182,12 +179,7 @@ When local files outgrow useful, point this at a model registry (W&B, MLflow, Hu
 EOF
 
 
-echo "✅ Library/research project skeleton created."
-echo ""
-echo "Package name: 'src'"
+echo "✅ ML-research project skeleton created."
 echo ""
 echo "Next steps:"
-echo "  1. Rename 'src' to your real package name if desired:"
-echo "       mv src <newname>"
-echo "       grep -rl 'src' . | xargs sed -i 's/src/<newname>/g'"
-echo "  2. python -m venv .venv && source .venv/bin/activate"
+echo "  python -m venv .venv && source .venv/bin/activate"
