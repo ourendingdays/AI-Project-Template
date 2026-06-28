@@ -37,11 +37,8 @@ env/
 
 # Data and model artifacts (large, generated, or sensitive)
 data/raw/*
-data/interim/*
-data/processed/*
-data/cache/*
-data/embeddings/*
-data/vectordb/*
+data/train/*
+data/test/*
 !data/**/.gitkeep
 !data/README.md
 
@@ -182,4 +179,5 @@ EOF
 echo "✅ ML-research project skeleton created."
 echo ""
 echo "Next steps:"
-echo "  python -m venv venv && source venv/bin/activate"
+echo "  python3 -m venv venv && source venv/bin/activate"
+echo "  pip install -r requirements.txt"
